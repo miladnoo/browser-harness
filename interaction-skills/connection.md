@@ -1,70 +1,55 @@
 # Connection & Tab Visibility
 
-The daemon connects to Chrome via CDP and attaches to a page. Common failure: it attaches to an invisible target (omnibox popup, detached tab) and all work happens where the user can't see it.
+## Startup sequence
 
-## Before doing anything
+1. Check if a daemon is already running with `daemon_alive()` before starting a new one
+2. If stale socket files exist but the daemon is dead, clean them up
+3. List open tabs with `list_tabs(include_chrome=True)` to see what's available
+4. Attach to a real tab with `ensure_real_tab()`
+5. Bring the tab to front with `Target.activateTarget` so the user can see it
 
 ```python
-# 1. Check if daemon is already running
-from admin import daemon_alive
+# Check existing state first
 if daemon_alive():
-    print("daemon already running")
+    print("daemon running")
 else:
-    print("need to start daemon")
+    # Clean stale sockets if needed
+    import os
+    for f in ["/tmp/bu-default.sock", "/tmp/bu-default.pid"]:
+        if os.path.exists(f): os.unlink(f)
     ensure_daemon()
 
-# 2. List all tabs to understand what's open
+# See what tabs exist
 tabs = list_tabs(include_chrome=True)
 for t in tabs:
     print(t["targetId"][:12], t["url"][:60])
-```
 
-## Ensure the user can SEE the page
-
-The daemon often attaches to `chrome://omnibox-popup.top-chrome/` (invisible 1px viewport). Always switch to a real tab AND activate it:
-
-```python
-# Switch to a real tab
+# Attach to a real page and make it visible
 tab = ensure_real_tab()
-
-# CRITICAL: activate it so it's the focused tab in Chrome
 cdp("Target.activateTarget", targetId=tab["targetId"])
 ```
 
-`ensure_real_tab()` switches the CDP session but does NOT make the tab visible. `Target.activateTarget` brings it to front in Chrome's UI.
+## Tab visibility
 
-## Never use new_tab() for visible work
+`ensure_real_tab()` switches the CDP session but does not bring the tab to front in Chrome's UI. `Target.activateTarget` does that.
 
-`new_tab()` creates a tab via CDP that may end up in a detached window or behind other tabs. Instead, navigate an existing visible tab:
+The daemon often attaches to `chrome://omnibox-popup.top-chrome/` which has a 1px viewport and is invisible to the user.
+
+## Navigating to a new URL
+
+Prefer navigating an existing visible tab over creating new ones. Tabs created via `new_tab()` may end up in detached windows or behind other tabs.
 
 ```python
-# BAD — tab may be invisible
-tid = new_tab("https://example.com")
-
-# GOOD — navigate the tab the user is already looking at
 tab = ensure_real_tab()
 cdp("Target.activateTarget", targetId=tab["targetId"])
 goto("https://example.com")
 ```
 
-## Multiple daemons
+## Bringing Chrome to front
 
-Check for stale sockets before starting:
+If the user can't see Chrome at all (window behind other apps or on another desktop):
 
 ```python
-import os
-# Clean up stale sockets if daemon process is dead
-if os.path.exists("/tmp/bu-default.sock"):
-    if not daemon_alive():
-        os.unlink("/tmp/bu-default.sock")
-        os.unlink("/tmp/bu-default.pid")
+import subprocess
+subprocess.run(["osascript", "-e", 'tell application "Google Chrome" to activate'])
 ```
-
-## Startup checklist
-
-1. `daemon_alive()` — is one already running?
-2. If not: clean stale sockets, then `ensure_daemon()`
-3. `list_tabs()` — see what's open
-4. `ensure_real_tab()` — attach to a real page
-5. `cdp("Target.activateTarget", targetId=...)` — make it visible
-6. `screenshot()` + verify — confirm user can see it
