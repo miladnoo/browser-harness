@@ -5,7 +5,7 @@ description: Direct browser control via CDP. Use when the user wants to automate
 
 # browser-harness
 
-Easiest and most powerful way to interact with the browser. **Before editing this file, read it in full.**
+Easiest and most powerful way to interact with the browser. **Read this file in full before using or editing the harness** — it has to be in context.
 
 ## Fast start
 
