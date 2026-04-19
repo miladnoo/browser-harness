@@ -71,7 +71,7 @@ osascript -e 'tell application "Google Chrome" to activate' \
    If Chrome shows the profile picker first, tell the user to choose their normal profile, *then* (only if `DevToolsActivePort` is still missing) open the inspect page in that profile. Keep polling instead of waiting for the user to type a follow-up.
 4. Be explicit with the user about the two possible Chrome actions: choose their normal profile if the profile picker is open, and in the remote-debugging tab tick the checkbox and click `Allow` once if Chrome shows it.
 5. Try to do everything yourself. Only ask the user to do something if it is truly necessary, like selecting the Chrome profile or clicking `Allow`. While the user is doing that, sleep and check every 3 seconds whether it is completed. After asking, keep retrying for at least 30 seconds even if you see connection-refused, stale websocket, or other weird transient attach errors.
-6. If setup still lands on the profile picker, have the user choose their normal profile, then open `chrome://inspect/#remote-debugging` in that profile and keep polling instead of restarting the explanation. As soon as attach succeeds, continue immediately with the verification task without asking again.
+6. If setup still lands on the profile picker, have the user choose their normal profile, then (only if `DevToolsActivePort` is still missing) open `chrome://inspect/#remote-debugging` in that profile and keep polling instead of restarting the explanation. As soon as attach succeeds, continue immediately with the verification task without asking again.
 7. Verify with:
 
 ```bash
